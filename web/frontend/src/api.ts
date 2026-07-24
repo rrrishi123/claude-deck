@@ -35,3 +35,19 @@ export function saveMeta(id: string, favorite: boolean, tags: string, notes: str
     body: JSON.stringify({ id, favorite, tags, notes }),
   }).then(j)
 }
+
+export const getTmux = (follow: boolean): Promise<import('./types').TmuxTopology> =>
+  fetch('/api/tmux' + (follow ? '?follow=1' : '')).then(j)
+
+export const tmuxExec = (chain: string[], args: string[]): Promise<{ ok: boolean; error?: string; output?: string }> =>
+  fetch('/api/tmux/exec', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ chain, args }),
+  }).then(j)
+
+export const tmuxRestore = (): Promise<{ ok: boolean; created?: string[]; skipped?: string[]; error?: string }> =>
+  fetch('/api/tmux/restore', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' }).then(j)
+
+export const searchPrompts = (q: string): Promise<import('./types').SearchHit[]> =>
+  fetch('/api/search?q=' + encodeURIComponent(q)).then(j)

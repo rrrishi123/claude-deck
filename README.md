@@ -34,6 +34,13 @@ Run Claude Code enough and the sessions pile up — dozens of them, scattered ac
 - **Favorites ★, tags & notes**, group-by-project, and a **⌘K palette** to jump to any session instantly.
 - **Zombie sweep** — spot and bulk-kill sessions that are running but idle.
 
+**🪟 tmux mission control** *(new — see [docs/TMUX.md](docs/TMUX.md))*
+- **Live topology** — every tmux session, window and pane, with the exact Claude session running in each pane. No hooks, no pane tagging: panes and processes share a tty, and resumed sessions carry their uuid in argv.
+- **Exact running status** — with tmux, running detection is per *pane*, so ten Claude sessions in the *same directory* each show as running, each with its location (`kosaten1:2.3 · claude-sessions`). Without tmux only the newest per directory can be told apart.
+- **Layers within layers** — an ssh pane that leads to tmux on another machine is descended into and shown nested, any depth. Every pane at every layer is controllable through the same API (`focus`, `kill`, or any tmux command, routed through the ssh chain).
+- **Crash-proof resurrect** — while the deck service runs it snapshots the topology every minute (`~/.claude/tmux-snapshots/`): window names, exact pane geometry, cwds, and which Claude session lives where. After a reboot, `claude-deck --tmux-restore latest` rebuilds everything and types `claude --resume <uuid>` into each pane. Existing sessions are never touched.
+- **Search every prompt ever** — full-text search (SQLite FTS5) across all sessions' prompts, with highlighted snippets; jump or resume straight from a hit.
+
 ## A closer look
 
 **Know when a session needs you — and answer without leaving the dashboard.**
@@ -78,6 +85,8 @@ A single Go binary embeds the React UI and serves it on `localhost`. On startup 
 | prompts, last-used, first prompt | `~/.claude/history.jsonl` |
 | model, tokens, git branch, messages | `~/.claude/projects/**/*.jsonl` transcripts |
 | running status, CPU, memory | live `pgrep`/`lsof`/`ps` (computed per request) |
+| tmux topology & pane bindings | `tmux list-panes -a` + tty/argv join (see [docs/TMUX.md](docs/TMUX.md)) |
+| prompt full-text search | SQLite FTS5 index over `history.jsonl` (incremental) |
 | favorites, tags, notes | ClaudeDeck's own SQLite table (survives re-ingest) |
 
 Your favorites/tags/notes are the only original data ClaudeDeck stores; everything else is derived from Claude Code's own files.
@@ -88,6 +97,7 @@ Each session can show a one-line **task** summary. If a session's directory has 
 ## Requirements
 - **macOS** with **iTerm2** (the focus/resume actions drive iTerm2 via AppleScript; the rest of the dashboard works regardless).
 - **Claude Code** installed (so `~/.claude` exists).
+- **tmux** is optional — with it you get the Tmux view, per-pane running status and crash-proof resurrect ([docs/TMUX.md](docs/TMUX.md)). Nested layers need key-based ssh to the remote hosts.
 
 ## Development
 ```bash

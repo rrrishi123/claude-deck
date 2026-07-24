@@ -44,6 +44,11 @@ type Session struct {
 	// Bypass is true when the running session was started with permission checks
 	// skipped (--dangerously-skip-permissions).
 	Bypass bool `json:"bypass"`
+
+	// TmuxLoc is where this session lives in tmux ("kosaten1:2.3 · claude-sessions")
+	// when it runs inside a tmux pane. Distinguishes many sessions sharing one
+	// directory far better than the project name can.
+	TmuxLoc string `json:"tmux_loc,omitempty"`
 }
 
 // PromptOption is one selectable choice in a terminal prompt. Key is the key to

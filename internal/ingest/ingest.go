@@ -142,6 +142,8 @@ func Run(claudeDir string, st *store.Store) (int, error) {
 		return 0, err
 	}
 	_ = st.SetDaily(daily)
+	// Keep the full-text prompt index current (incremental; cheap).
+	_ = st.IndexHistory(claudeDir)
 	return len(out), nil
 }
 

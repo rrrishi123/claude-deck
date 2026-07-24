@@ -173,6 +173,7 @@ function Row({ s, open, onToggle, h }: { s: Session; open: boolean; onToggle: (i
             <span className="proj">{s.title || s.project || '(unknown)'}</span>
             {wait && <span className="waitchip">⏳ needs you</span>}
             {wk && <span className="workchip">working<i>.</i><i>.</i><i>.</i></span>}
+            {s.tmux_loc && <span className="tmuxchip" title="tmux pane">⧉ {s.tmux_loc}</span>}
             {tagChips.map(t => <span className="tagchip" key={t}>{t}</span>)}
           </div>
           <div className="cwd">{s.cwd || s.id}</div>

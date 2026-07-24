@@ -19,6 +19,7 @@ import (
 	"github.com/tachodril/claude-deck/internal/prompts"
 	"github.com/tachodril/claude-deck/internal/store"
 	"github.com/tachodril/claude-deck/internal/terminal"
+	"github.com/tachodril/claude-deck/internal/tmuxview"
 	"github.com/tachodril/claude-deck/web"
 )
 
@@ -34,10 +35,15 @@ type Server struct {
 	promptsMu  sync.Mutex
 	waiting    map[string]*model.Prompt // cwd -> prompt the session is blocked on
 	lastReq    time.Time
+	tmuxMu     sync.Mutex
+	tmuxTop    *tmuxview.Topology // short-lived cache, see topology()
+	tmuxAt     time.Time
+	feedMu     sync.Mutex
+	feedSubs   map[chan []byte]bool // SSE subscribers of the witness feed
 }
 
 func New(st *store.Store, claudeDir string) *Server {
-	return &Server{st: st, claudeDir: claudeDir, lastIngest: time.Now()}
+	return &Server{st: st, claudeDir: claudeDir, lastIngest: time.Now(), feedSubs: map[chan []byte]bool{}}
 }
 
 // maybeReingest refreshes the DB from ~/.claude at most every 15s, in the
@@ -101,6 +107,7 @@ func (s *Server) scanPrompts() {
 
 func (s *Server) Listen(addr string) error {
 	go s.watchPrompts()
+	s.startWitness()
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/sessions", s.handleSessions)
 	mux.HandleFunc("/api/stats", s.handleStats)
@@ -108,6 +115,12 @@ func (s *Server) Listen(addr string) error {
 	mux.HandleFunc("/api/environment", s.handleEnvironment)
 	mux.HandleFunc("/api/meta", s.handleMeta)
 	mux.HandleFunc("/api/action", s.handleAction)
+	mux.HandleFunc("/api/tmux", s.handleTmux)
+	mux.HandleFunc("/api/tmux/exec", s.handleTmuxExec)
+	mux.HandleFunc("/api/tmux/restore", s.handleTmuxRestore)
+	mux.HandleFunc("/api/tmux/history", s.handleTmuxHistory)
+	mux.HandleFunc("/api/tmux/feed", s.handleTmuxFeed)
+	mux.HandleFunc("/api/search", s.handleSearch)
 	sub, _ := fs.Sub(web.FS, "static")
 	fileServer := http.FileServer(http.FS(sub))
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -123,8 +136,10 @@ func (s *Server) Listen(addr string) error {
 	return http.ListenAndServe(addr, mux)
 }
 
-// withStatus loads sessions and overlays live status: a cwd with a running
-// claude process marks its most-recently-used session as "running".
+// withStatus loads sessions and overlays live status. Sessions found in tmux
+// panes are identified exactly (per-pane binding), so many sessions running in
+// the same directory each show as running — the old cwd heuristic only marks
+// the most-recently-used one and stays as the fallback for non-tmux terminals.
 func (s *Server) withStatus() ([]model.Session, error) {
 	s.maybeReingest()
 	s.mu.Lock()
@@ -135,12 +150,25 @@ func (s *Server) withStatus() ([]model.Session, error) {
 		return nil, err
 	}
 	procs := live.ClaudeProcs()
+	binds := tmuxBindings(s.topology(sessions))
+	boundPid := map[string]bool{}
+	for _, b := range binds {
+		boundPid[b.pid] = true
+	}
+	// cwd heuristic operates on whatever tmux didn't already account for
 	running := map[string]bool{}
-	for cwd := range procs {
-		running[cwd] = true
+	for cwd, pids := range procs {
+		for _, pid := range pids {
+			if !boundPid[pid] {
+				running[cwd] = true
+			}
+		}
 	}
 	newest := map[string]int64{}
 	for _, ss := range sessions {
+		if _, tmuxBound := binds[ss.ID]; tmuxBound {
+			continue
+		}
 		if running[ss.Cwd] && ss.LastUsedAt > newest[ss.Cwd] {
 			newest[ss.Cwd] = ss.LastUsedAt
 		}
@@ -153,7 +181,14 @@ func (s *Server) withStatus() ([]model.Session, error) {
 	bypassCache := map[string]bool{}
 	for i := range sessions {
 		s := &sessions[i]
-		if running[s.Cwd] && s.LastUsedAt == newest[s.Cwd] {
+		b, tmuxBound := binds[s.ID]
+		switch {
+		case tmuxBound:
+			s.Status = "running"
+			s.TmuxLoc = b.loc
+			s.CPU, s.MemMB = live.UsageForPids([]string{b.pid})
+			s.Bypass = b.bypass
+		case running[s.Cwd] && s.LastUsedAt == newest[s.Cwd]:
 			s.Status = "running"
 			if u, ok := usageCache[s.Cwd]; ok {
 				s.CPU, s.MemMB = u[0], u[1]
@@ -164,19 +199,20 @@ func (s *Server) withStatus() ([]model.Session, error) {
 				usageCache[s.Cwd] = [2]float64{s.CPU, s.MemMB}
 				bypassCache[s.Cwd] = s.Bypass
 			}
-			s.Working = s.CPU > workingCPU
-			if !s.Working {
-				if fi, err := os.Stat(tpaths[s.ID]); err == nil {
-					s.Working = time.Since(fi.ModTime()) < workingWindow
-				}
-			}
-			if p := waiting[s.Cwd]; p != nil {
-				s.Waiting = true
-				s.Prompt = p
-				s.Working = false
-			}
-		} else {
+		default:
 			s.Status = "ended"
+			continue
+		}
+		s.Working = s.CPU > workingCPU
+		if !s.Working {
+			if fi, err := os.Stat(tpaths[s.ID]); err == nil {
+				s.Working = time.Since(fi.ModTime()) < workingWindow
+			}
+		}
+		if p := waiting[s.Cwd]; p != nil {
+			s.Waiting = true
+			s.Prompt = p
+			s.Working = false
 		}
 	}
 	return sessions, nil

@@ -24,6 +24,7 @@ export interface Session {
   working: boolean
   waiting: boolean
   prompt?: Prompt
+  tmux_loc?: string
 }
 
 export interface PromptOption { key: string; label: string }
@@ -55,3 +56,19 @@ export interface EnvStats {
 }
 
 export type Action = 'focus' | 'resume' | 'new' | 'kill' | 'reveal' | 'send' | 'message' | 'bypass' | 'unbypass'
+
+// --- tmux topology ---
+export interface TmuxBind { session_id?: string; pid: string; bypass: boolean; method: string }
+export interface TmuxPane {
+  id: string; index: number; pid: string; tty: string; cmd: string; cwd: string
+  title: string; active: boolean; claude?: TmuxBind; ssh_dest?: string; nested?: TmuxTopology
+}
+export interface TmuxWindow { id: string; index: number; name: string; layout: string; active: boolean; panes: TmuxPane[] }
+export interface TmuxSession { id: string; name: string; attached: boolean; windows: TmuxWindow[] }
+export interface TmuxTopology { host: string; chain: string[] | null; sessions: TmuxSession[] | null; err?: string; as_of?: number; edge?: 'attached' | 'reachable' }
+
+// --- full-text search ---
+export interface SearchHit {
+  session_id: string; ts: number; snippet: string
+  project: string; cwd: string; title: string; git_branch: string
+}

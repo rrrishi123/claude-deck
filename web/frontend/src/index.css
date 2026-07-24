@@ -254,3 +254,33 @@ input[type=search]:focus{border-color:var(--ice)}
 .toast{position:fixed;bottom:22px;right:22px;background:var(--panel2);border:1px solid var(--hull);color:var(--txt);padding:11px 16px;border-radius:10px;font-size:13px;box-shadow:0 8px 30px rgba(0,0,0,.5);max-width:440px;z-index:60}
 .toast.ok{border-color:rgba(95,224,240,.5)}
 .toast.err{border-color:rgba(255,107,107,.5)}
+
+/* --- tmux topology view --- */
+.tmuxlayer { border: 1px solid var(--line, #26262c); border-radius: 8px; padding: 10px 14px; margin: 10px 0; }
+.tmuxlayer.nested { margin-left: 26px; border-style: dashed; opacity: .96; }
+.tmuxhost { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; opacity: .7; margin-bottom: 6px; }
+.tmuxhost .err { color: #e66; text-transform: none; }
+.tmuxsess { margin: 6px 0; }
+.tmuxsessname { font-weight: 600; margin: 6px 0; }
+.tmuxwin { margin: 2px 0 8px 16px; }
+.tmuxwinname { font-size: 12px; opacity: .75; margin: 4px 0; }
+.tmuxpane { display: flex; align-items: center; gap: 8px; padding: 4px 8px; margin-left: 14px; border-radius: 6px; }
+.tmuxpane:hover { background: rgba(255,255,255,.04); }
+.tmuxpane.hasclaude { background: rgba(190,120,255,.06); }
+.tmuxpane .cwd { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tmuxpane .rowact { opacity: 0; }
+.tmuxpane:hover .rowact { opacity: 1; }
+.tmuxloc { font-size: 11px; opacity: .65; min-width: 110px; }
+.claudechip { font-size: 12px; padding: 1px 8px; border-radius: 10px; background: rgba(190,120,255,.15); border: 1px solid rgba(190,120,255,.3); }
+.tmuxchip { font-size: 11px; padding: 0 6px; border-radius: 8px; background: rgba(120,190,255,.12); border: 1px solid rgba(120,190,255,.25); }
+.dim { opacity: .55; font-size: 11px; }
+
+/* --- prompt search view --- */
+.searchhits { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.shit { border: 1px solid var(--line, #26262c); border-radius: 8px; padding: 10px 14px; }
+.shithead { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.shithead .mono { margin-left: auto; }
+.snippet { font-size: 13px; line-height: 1.5; opacity: .9; word-break: break-word; }
+.snippet mark { background: rgba(255,210,80,.28); color: inherit; border-radius: 3px; padding: 0 2px; }
+.tmuxsessname .gcount { margin-left: 8px; font-weight: 400; opacity: .6; font-size: 11px; }
+.tmuxhost .asof { text-transform: none; letter-spacing: normal; }

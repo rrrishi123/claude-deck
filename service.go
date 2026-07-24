@@ -35,7 +35,7 @@ func installService(port string) error {
   <key>Label</key><string>%s</string>
   <key>ProgramArguments</key><array><string>%s</string><string>--port</string><string>%s</string><string>--no-open</string></array>
   <key>RunAtLoad</key><true/><key>KeepAlive</key><true/>
-  <key>EnvironmentVariables</key><dict><key>PATH</key><string>/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin</string></dict>
+  <key>EnvironmentVariables</key><dict><key>PATH</key><string>/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/homebrew/bin</string></dict>
   <key>StandardOutPath</key><string>%s</string><key>StandardErrorPath</key><string>%s</string>
 </dict></plist>
 `, agentLabel, exe, port, logPath, logPath)

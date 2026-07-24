@@ -8,6 +8,8 @@ import Analytics from './components/Analytics'
 import Palette from './components/Palette'
 import Composer from './components/Composer'
 import NewSession from './components/NewSession'
+import Tmux from './components/Tmux'
+import Search from './components/Search'
 
 export interface Handlers {
   runAction: (a: Action, s: Session, text?: string, perm?: string) => Promise<void>
@@ -22,7 +24,7 @@ export default function App() {
   const [sessions, setSessions] = useState<Session[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
-  const [view, setView] = useState<'sessions' | 'analytics'>('sessions')
+  const [view, setView] = useState<'sessions' | 'analytics' | 'tmux' | 'search'>('sessions')
   const [paused, setPaused] = useState(false)
   const [clock, setClock] = useState('')
   const [toast, setToast] = useState<{ msg: string; kind: string } | null>(null)
@@ -122,6 +124,8 @@ export default function App() {
         <div className="eyebrow">Mission Control</div>
         <div className="nav">
           <button className={view === 'sessions' ? 'on' : ''} onClick={() => setView('sessions')}>Sessions</button>
+          <button className={view === 'tmux' ? 'on' : ''} onClick={() => setView('tmux')}>Tmux</button>
+          <button className={view === 'search' ? 'on' : ''} onClick={() => setView('search')}>Search</button>
           <button className={view === 'analytics' ? 'on' : ''} onClick={() => setView('analytics')}>Analytics</button>
         </div>
         <div className="right">
@@ -137,9 +141,10 @@ export default function App() {
 
       {view === 'sessions' && <Hero stats={stats} daily={analytics?.daily || []} />}
 
-      {view === 'sessions'
-        ? <Sessions sessions={sessions} handlers={handlers} />
-        : <Analytics data={analytics} />}
+      {view === 'sessions' && <Sessions sessions={sessions} handlers={handlers} />}
+      {view === 'tmux' && <Tmux sessions={sessions} toast={showToast} />}
+      {view === 'search' && <Search sessions={sessions} handlers={handlers} />}
+      {view === 'analytics' && <Analytics data={analytics} />}
 
       {paletteOpen && <Palette sessions={sessions} runAction={runAction} onClose={() => setPaletteOpen(false)} />}
       {compose && <Composer session={compose} runAction={runAction} onClose={() => setCompose(null)} />}
